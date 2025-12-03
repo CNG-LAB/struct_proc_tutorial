@@ -14,7 +14,10 @@ In this repository we will go over how to run preprocesing for structural MRI da
 *Micapipe’s structural pipeline provides a comprehensive and standardized framework for transforming raw T1-weighted MRI data into high-quality cortical surfaces, anatomical segmentations, and morphometric features. This processing stream integrates established neuroimaging tools with optimized workflows to ensure reproducibility and reliability across participants and studies.*
 
 This section explains how to run the **proc_structural workflow**, how the SLURM submission works, how to interpret each part of the script, and where to find your outputs.
-You can find the command for running proc_structural below: 
+
+### Now lets break down example command for running proc_structural on a SLURM: all the ingredients that we need are:
+
+
 ```
 #!/bin/bash
 
@@ -23,23 +26,74 @@ You can find the command for running proc_structural below:
 #SBATCH --time 5:00:00
 #SBATCH --job-name struct
 #SBATCH --partition=standard
+```
 
+1. The first line requests 10 CPU cores for your job (-c10). It tells the cluster that your program should run using 10 parallel threads.
+2. Next is the
+Memory (-mem 15G). This requests 15 GB of RAM. SLURM will only place your job on a compute node that has at least this much free memory.
+If your job uses more memory than you requested, it may be killed, so this value is important to set correctly.
+3. Runtime Limit (-time 5:00:00). This sets the maximum allowed runtime for the job to 5 hours.
+If the job exceeds this limit, the scheduler automatically cancels it.Useful for preventing jobs from running indefinitely.
+4. Job Name (-job-name struct). This assigns a custom name to your job—for example, “struct”.
+It helps you easily identify your job when checking the queue or your job history.
+5. Partition (-partition=standard) This selects the cluster partition (queue) where the job should run.
+Clusters usually offer partitions like “standard”, “high-memory”, “GPU”, etc. The partition controls priority, hardware type, and resource limits. The higher priority, the faster cluster starts the submitted job.
+
+
+
+
+
+```
 # cores
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
+```
+This export command ensures that your software uses the same number of threads as the CPU cores you requested.
 
+
+
+
+
+```
 # define tmp
 job_tmp_dir=$TMPDIR/$SLURM_JOB_ID
 mkdir $job_tmp_dir
+```
 
+The Temporary Working Directory and The SLURM. *(if you are not familiar with the SLURM you can find information on it int the helpbook document mention in the beginning of this file)*
+The tmp line defines the temporary working directory on the compute node. This is required on SLURM because each compute node has its own local space. Using local scratch improves speed and prevents network storage overload
+
+
+
+
+```
 # params
 sub=$1
 ses=$2
+```
+Parameters define the **subject** and **session** labels in your BIDS dataset.
 
+
+
+```
 micapipe_img=/data/p_SoftwareServiceLinux_micapipe/0.2.3/singularity/
-bids=/data/p_03140/BIDS_spacetop
-out=/data/p_03140/BIDS_spacetop/derivatives
-fs_lic=/data/p_03140/resources/license.txt
+bids=/data/your/BIDS
+out=/data/your/BIDS/derivatives
+fs_lic=/data/your/resources/license.txt
+```
 
+micapipe_img = This is the Micapipe Singularity/Apptainer image, e.g.:
+micapipe_v0.2.3.sif
+
+​
+*Why you need it:*
+Contains all required software (FreeSurfer, FSL, ANTs, MRtrix3)
+Guarantees reproducibility. Ensures the correct Micapipe version. How to get it:
+Download from the official release page. Or build it locally using the Micapipe recipe. Potential error: If the image is missing or not correctly bound, the job will fail before structural processing begins.
+
+
+
+
+```
 # run
 singularity run --cleanenv --writable-tmpfs --containall \
     -B ${bids}:/bids \
@@ -59,12 +113,15 @@ check_ComputeClusterSlurm_memory-usage
 
 
 
+
+
+
 This is a wrapper that will call the command line above: 
 ```
 #!/bin/bash
 
 # create directory to save log files
-logs_dir="/data/p_03140/logs"
+logs_dir="/data/your/logs"
 
 #run job
 sub="0001"
@@ -72,34 +129,62 @@ ses="01"
 
 sbatch --error "${logs_dir}/${sub}_${ses}".err \
     --output "${logs_dir}/${sub}_${ses}".out \
-    /data/p_03140/scripts/1_struct_micapipe_proc_struct.sh  "${sub}" "${ses}"
+    /data/your/scripts/1_struct_micapipe_proc_struct.sh  "${sub}" "${ses}"
 ```
 
-Now lets pay attention at each line of command and what it stands for: 
+In order to run the script we have constructed above (you can see the script used for the Spacetop Dataset preprocessing: 1_struct_micapipe_proc_struct.sh in the repo) we can wrap it using the wrapper calling sript: (example: 1_struct_sbatch_wrapper.sh) What we do from now is that we send our wrapper script to a submission node.
+
 
 ### draft (writting it currently properly) :
-mention how does memory work on the cluster. 
 
-The Temporary Working Directory and The SLURM. *(if you are not familiar with the SLURM you can find information on it int the helpbook document mention in the beginning of this file)*
 
-The *tmp* line defines the temporary working directory on the compute node. This is required on SLURM because each compute node has its own local space. Using local scratch improves speed and prevents network storage overload.
-(screenshot )
-Submitting the Job on a SLURM Cluster
-We now run the command through a compute node on the SLURM-based cluster system.
+## Submitting the Job on a SLURM Cluster
+Now we have build the command line, and we are ready and excited to run it:
+We run the command through a compute node on the SLURM-based cluster system.
 To request a compute node, run:
-getserver -sb 
+
+```
+getserver -sb
+```
+
 As soon as you run it, you will see something like:
-( screenshot )
-Side Note: What getserver Does: hetserver contacts the SLURM scheduler and requests an available compute node.
+<img width="797" height="512" alt="SUBMISSIONnode" src="https://github.com/user-attachments/assets/02b46d7f-7f05-4fd0-8607-734e492eb763" />
+
+
+*Side Note: What getserver Does: hetserver contacts the SLURM scheduler and requests an available compute node.*
+
 sb = submit + batch mode, meaning a job script is automatically prepared.
 If you run only:
-getserver 
+```
+getserver
+```
 you will enter an interactive mode, where you can manually choose the cluster node, CPUs, and RAM.
 Interactive mode is useful for testing commands.
-( screenshot)
+
+
+<img width="796" height="65" alt="getserver" src="https://github.com/user-attachments/assets/0f3ac9ad-8c91-4181-9766-44f32b54f454" />
+
+
+
 after you saw the available node you can choose and activate it by using the command: ssh and the putting the name of the node next to it. 
-screenshot 
-After Submitting the Job
+<img width="801" height="475" alt="postSSH" src="https://github.com/user-attachments/assets/ae9357cd-7387-443a-90c3-2d613ed64280" />
+
+
+
+How to submit after being in the Submission node: 
+
+```
+/data/your/location/example_sbatch_wrapper_proc_struct.sh 
+```
+*note to adapt it according with your directory and script name*
+
+<img width="765" height="44" alt="jobid" src="https://github.com/user-attachments/assets/61ad28bb-ef12-49bc-b675-8e1b36c6130f" />
+
+
+
+
+
+### After submitting the job
 Once submitted, SLURM gives you a job ID.
 Useful commands:
 
@@ -122,36 +207,13 @@ When SLURM starts the job, your script will typically create a temporary directo
 mkdir /tmp/jobID/
 
 
-This is where intermediate files are stored during processing. Temporary files are removed automatically at the end unless you choose to keep them.
- Explanation of Parameters
-sub
- and ses
-These define the subject and session labels in your BIDS dataset.
-Example format:
-sub-001
-ses-01
 
-​
-micapipe_img
-This is the Micapipe Singularity/Apptainer image, e.g.:
-micapipe_v0.2.3.sif
-
-​
-Why you need it:
-Contains all required software (FreeSurfer, FSL, ANTs, MRtrix3)
-Guarantees reproducibility
-Ensures the correct Micapipe version
-How to get it:
-Download from the official release page
-Or build it locally using the Micapipe recipe
-potential error: If the image is missing or not correctly bound, the job will fail before structural processing begins.
-bids=
 Path to your raw BIDS dataset, e.g.:
 bids=/path/to/BIDS
 
 ​
 Must include:
-sub-XXX/anat/sub-XXX_T1w.nii.gz
+sub-.../anat/sub-..._T1w.nii.gz
 
 ​
 (check BIDS structure.)
@@ -161,7 +223,7 @@ out=/path/to/derivatives
 
 ​
 Micapipe will automatically create:
-derivatives/micapipe/sub-XXX/
+derivatives/micapipe/sub-.../
 
 ​
 Output in Derivatives
@@ -187,14 +249,14 @@ ls sub-*/anat/
 tree sub-001
 
 ​
- Running the Structural Job
+ Running the structural job
 This is the main execution step inside the SLURM job script:
-bash 
+bash /data/your/location/example_proc_struct.sh 
 ​
-Loads the module/environment, Runs Micapipe with selected flags, Uses the compute node’s CPU/RAM, Writes final files to the derivatives folder. 
- Clean Up
-After the job finishes:Temporary directories in /tmp/
+Loads the module/environment, runs Micapipe with selected flags, Uses the compute node’s CPU/RAM, Writes final files to the derivatives folder. 
+ Clean up
+after the job finishes:Temporary directories in /tmp/
  are cleared. Only the derivatives output remains. Logs remain in SLURM submit directory.
-Cluster Memory Considerations: 
-If memory is too low: SLURM will kill the job, logs will show “Out of memory” errors
+Cluster memory note: 
+If memory is too low: SLURM will kill the job, logs will show “Out of memory” errors.
 Always request adequate memory in your SLURM header.
