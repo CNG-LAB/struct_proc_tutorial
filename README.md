@@ -6,7 +6,7 @@ In this repository we will go over how to run preprocesing for structural MRI da
 [Full documentation is available here](https://micapipe.readthedocs.io).
 
 
-The tutorials here are designed to direct ypu to the infromation you need in order to understand and run your preprocessing pipeline. We will go throught how to:
+The tutorials here are designed to direct you to the infromation you need in order to understand and run your preprocessing pipeline. We will go throught how to:
 * Build your own proc_struct command line
 * How to work with supermachine clusters
 * Cortical thickness analysis and plotting 
