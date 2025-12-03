@@ -24,7 +24,7 @@ The tutorials here are designed to direct ypu to the infromation you need in ord
 
 
 
-### draft (writting it currently properly) :
+### draft (writting it currently properly will move it ot the notebook to be found in the step by step folder) :
 
 
 ## Submitting the Job on a SLURM Cluster
