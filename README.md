@@ -78,6 +78,7 @@ sbatch --error "${logs_dir}/${sub}_${ses}".err \
 Now lets pay attention at each line of command and what it stands for: 
 
 ### draft (writting it currently properly) :
+mention how does memory work on the cluster. 
 
 The Temporary Working Directory and The SLURM. *(if you are not familiar with the SLURM you can find information on it int the helpbook document mention in the beginning of this file)*
 
